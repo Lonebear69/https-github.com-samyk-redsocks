@@ -1,5 +1,5 @@
 -include make.conf
-OBJS := parser.o main.o redsocks.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o dnsu2t.o gen/version.o
+OBJS := parser.o main.o redsocks.o apple.o tdestroy.o tsearch.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o dnsu2t.o gen/version.o
 ifeq ($(DBG_BUILD),1)
 OBJS += debug.o
 endif
@@ -16,7 +16,8 @@ LIBS += -levent_extra
 endif
 CFLAGS += -g -O2
 # _GNU_SOURCE is used to get splice(2), it also implies _BSD_SOURCE
-override CFLAGS += -std=c99 -D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE -D_GNU_SOURCE -Wall
+override CFLAGS += -std=c99 -D_DEFAULT_SOURCE -D_GNU_SOURCE -Wall
+#override CFLAGS += -std=c99 -D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE -D_GNU_SOURCE -Wall
 
 all: $(OUT)
 
@@ -69,6 +70,7 @@ $(DEPS): $(SRCS)
 	gcc -MM $(SRCS) 2>/dev/null >$(DEPS) || \
 	( \
 		for I in $(wildcard *.h); do \
+			echo $(I)
 			export $${I//[-.]/_}_DEPS="`sed '/^\#[ \t]*include \?"\(.*\)".*/!d;s//\1/' $$I`"; \
 		done; \
 		echo -n >$(DEPS); \

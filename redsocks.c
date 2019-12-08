@@ -134,7 +134,11 @@ static int redsocks_onenter(parser_section *section)
 	 * Linux:   sysctl net.core.somaxconn
 	 * FreeBSD: sysctl kern.ipc.somaxconn */
 	instance->config.listenq = SOMAXCONN;
+#ifdef __APPLE__
+	instance->config.use_splice = false;
+#else
 	instance->config.use_splice = is_splice_good();
+#endif
 	instance->config.disclose_src = DISCLOSE_NONE;
 	instance->config.on_proxy_fail = ONFAIL_CLOSE;
 
@@ -682,7 +686,7 @@ void redsocks_drop_client(redsocks_client *client)
 
 		struct timeval now, idle;
 		redsocks_gettimeofday(&now); // FIXME: use CLOCK_MONOTONIC
-		timersub(&now, &client->last_event, &idle);
+		Timersub(&now, &client->last_event, &idle);
 		redsocks_log_error(client, LOG_INFO, "dropping client (%s), relay (%s), idle %ld.%06lds",
 			redsocks_event_str( (~client->client_evshut) & (EV_READ|EV_WRITE) ),
 			redsocks_event_str( (~client->relay_evshut) & (EV_READ|EV_WRITE) ),
@@ -993,14 +997,15 @@ static struct timeval drop_idle_connections()
 		redsocks_client *tmp, *client;
 		list_for_each_entry_safe(client, tmp, &instance->clients, list) {
 			struct timeval idle;
-			timersub(&now, &client->last_event, &idle);
-			if (timercmp(&idle, &zero, <=) || timercmp(&max_idle, &idle, <=)) {
+			Timersub(&now, &client->last_event, &idle);
+			if (!Timercmp(&idle, &zero, >) || !Timercmp(&max_idle, &idle, >)) {
 				redsocks_drop_client(client);
 				best_next = zero;
 			} else {
 				struct timeval delay;
-				timersub(&max_idle, &idle, &delay);
-				if (timercmp(&delay, &best_next, <)) {
+				Timersub(&max_idle, &idle, &delay);
+			// >= !Timercmp(..., <) <= !Timercmp(..., >) == !Timercmp(..., !=)
+				if (Timercmp(&delay, &best_next, <)) {
 					best_next = delay;
 				}
 			}
@@ -1038,7 +1043,7 @@ static void conn_pressure()
 	uint32_t delay = (red_randui32() % accept_backoff_ms) + 1;
 	struct timeval tvdelay = { delay / 1000, (delay % 1000) * 1000 };
 
-	if (timerisset(&next) && timercmp(&next, &tvdelay, <) ) {
+	if (timerisset(&next) && Timercmp(&next, &tvdelay, <) ) {
 		tvdelay = next;
 	}
 
@@ -1289,8 +1294,8 @@ static uint32_t redsocks_debug_dump_instance(redsocks_instance *instance, struct
 		const char *s_client_evshut = redsocks_evshut_str(client->client_evshut);
 		const char *s_relay_evshut = redsocks_evshut_str(client->relay_evshut);
 		struct timeval age, idle;
-		timersub(now, &client->first_event, &age);
-		timersub(now, &client->last_event, &idle);
+		Timersub(now, &client->first_event, &age);
+		Timersub(now, &client->last_event, &idle);
 
 		if (!instance->config.use_splice) {
 			redsocks_log_error(client, LOG_NOTICE, "client: %i (%s)%s%s, relay: %i (%s)%s%s, age: %ld.%06ld sec, idle: %ld.%06ld sec.",

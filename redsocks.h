@@ -7,7 +7,7 @@
 #include <event.h>
 #include "list.h"
 #include "parser.h"
-
+#include "apple.h"
 
 struct redsocks_client_t;
 struct redsocks_instance_t;
